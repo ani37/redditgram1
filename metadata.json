@@ -1,0 +1,8 @@
+{
+  "name": "ReddiGram AI Pipeline",
+  "description": "An automated dashboard that discovers trending Reddit content, generates stunning AI visuals using Gemini, and prepares them for Instagram publishing.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
