@@ -14,6 +14,7 @@ const App: React.FC = () => {
   const [pipelineItems, setPipelineItems] = useState<PipelineItem[]>([]);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [isBatchGenerating, setIsBatchGenerating] = useState(false);
   const [activePipelineItem, setActivePipelineItem] = useState<PipelineItem | null>(null);
   const [publishStep, setPublishStep] = useState<PublishStep>('idle');
   const [publishError, setPublishError] = useState<string | null>(null);
@@ -89,22 +90,35 @@ const App: React.FC = () => {
     }
   };
 
+  const handleGenerateTop3 = async () => {
+    if (trendingPosts.length === 0) return;
+    setIsBatchGenerating(true);
+    const toProcess = trendingPosts.slice(0, 3);
+    
+    try {
+      for (const post of toProcess) {
+        // Skip if already generating this one via individual click (rare)
+        if (generatingId === post.id) continue;
+        await handleGenerate(post, false);
+      }
+    } catch (error) {
+      console.error("Batch generation failed:", error);
+    } finally {
+      setIsBatchGenerating(false);
+    }
+  };
+
   const handleAutoPopulateSchedule = async () => {
     setIsBatchProcessing(true);
     try {
-      // 1. Fetch from preferred subreddits
       const targetSub = settings.preferredSubreddits[Math.floor(Math.random() * settings.preferredSubreddits.length)];
       const posts = await fetchTrendingRedditTopics(targetSub);
-      
-      // 2. Take the top X posts based on dailyPostCount
       const toProcess = posts.slice(0, settings.dailyPostCount);
       
-      // 3. Process each
       for (let i = 0; i < toProcess.length; i++) {
         const post = toProcess[i];
         const newItem = await handleGenerate(post, true);
         if (newItem) {
-          // Stagger the schedule
           setPipelineItems(prev => prev.map(item => 
             item.id === newItem.id 
               ? { ...item, scheduledFor: Date.now() + (3600000 * (i + 1) * 3) } // Every 3 hours
@@ -284,9 +298,26 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 py-2 border-b border-slate-800">
-               <span className="text-xs font-bold text-slate-500 uppercase">Showing trends from:</span>
-               <span className="text-xs font-bold text-white px-2 py-0.5 bg-slate-800 rounded">r/{subredditQuery}</span>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-2 border-b border-slate-800">
+               <div className="flex items-center gap-3">
+                 <span className="text-xs font-bold text-slate-500 uppercase">Showing trends from:</span>
+                 <span className="text-xs font-bold text-white px-2 py-0.5 bg-slate-800 rounded">r/{subredditQuery}</span>
+               </div>
+               
+               {trendingPosts.length > 0 && (
+                 <button 
+                   onClick={handleGenerateTop3}
+                   disabled={isBatchGenerating || isLoadingTrends}
+                   className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20 disabled:opacity-50"
+                 >
+                   {isBatchGenerating ? (
+                     <i className="fa-solid fa-circle-notch fa-spin"></i>
+                   ) : (
+                     <i className="fa-solid fa-layer-group"></i>
+                   )}
+                   Generate Top 3
+                 </button>
+               )}
             </div>
 
             {isLoadingTrends ? (
