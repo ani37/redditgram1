@@ -15,7 +15,7 @@ export const fetchTrendingRedditTopics = async (subreddit: string = 'all'): Prom
   const ai = getGeminiClient();
   const prompt = `Find 5 trending and interesting posts from Reddit (specifically r/${subreddit} or similar). 
   Return a list of these posts with their title, author, a brief summary of why it's trending, and an estimated score.
-  Focus on visually interesting or emotionally engaging topics that would work well for Instagram. Should be the best one out there`;
+  Focus on visually interesting or emotionally engaging topics that would work well for Instagram`;
 
   try {
     const response = await ai.models.generateContent({
